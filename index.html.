@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -41,7 +41,8 @@
                     <h3 class="text-xl font-bold tracking-tight">Upcoming Activities</h3>
                 </div>
                 <div id="upcoming-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    </div>
+                    <div class="col-span-full py-10 text-center text-slate-400">Loading events...</div>
+                </div>
             </section>
 
             <section>
@@ -49,8 +50,7 @@
                     <span class="h-3 w-3 rounded-full bg-slate-300"></span>
                     <h3 class="text-xl font-bold tracking-tight">Archive</h3>
                 </div>
-                <div id="past-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 opacity-60 grayscale-[0.5]">
-                    </div>
+                <div id="past-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 opacity-60 grayscale-[0.5]"></div>
             </section>
         </div>
     </main>
@@ -58,23 +58,23 @@
     <script>
         let allEvents = [];
 
-        // 1. Fetch data from your GitHub JSON file
         async function fetchEvents() {
             try {
-                // This looks for 'events.json' in your repository
-                const response = await fetch('events.json');
+                // ADDED: Cache-buster (?t=...) ensures Chrome doesn't show old data
+                const response = await fetch('events.json?t=' + new Date().getTime());
+                if (!response.ok) throw new Error("File not found");
+                
                 allEvents = await response.json();
                 renderEvents(allEvents);
             } catch (error) {
-                console.error("Data not found. Waiting for bridge...");
+                console.error("Connection Error:", error);
                 document.getElementById('upcoming-list').innerHTML = `
                     <div class="col-span-full py-10 text-center text-slate-400 border-2 border-dashed border-slate-200 rounded-2xl">
-                        Waiting for first data sync from Excel...
+                        Waiting for data sync from Excel... (Make sure events.json exists)
                     </div>`;
             }
         }
 
-        // 2. Render logic: Separates Upcoming from Past automatically
         function renderEvents(data) {
             const upcomingList = document.getElementById('upcoming-list');
             const pastList = document.getElementById('past-list');
@@ -83,22 +83,35 @@
             upcomingList.innerHTML = '';
             pastList.innerHTML = '';
 
-            // Sort by date (Soonest first)
+            if (data.length === 0) {
+                upcomingList.innerHTML = '<div class="col-span-full text-center text-slate-400">No events found.</div>';
+                return;
+            }
+
+            // Sort by date
             data.sort((a, b) => new Date(a.date) - new Date(b.date));
 
             data.forEach(event => {
-                const isPast = event.date < today;
+                // PROTECTION: Ensures code doesn't break if a field is empty
+                const title = event.title || "Untitled Event";
+                const category = event.category || "General";
+                const date = event.date || "TBD";
+                const time = event.time || "";
+                const description = event.description || "";
+                
+                const isPast = date < today && date !== "TBD";
+                
                 const card = `
                     <div class="event-card bg-white p-7 rounded-3xl border border-slate-100 shadow-sm flex flex-col h-full">
                         <div class="flex justify-between items-start mb-5">
-                            <span class="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-widest rounded-lg">${event.category || 'General'}</span>
+                            <span class="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-widest rounded-lg">${category}</span>
                             <div class="text-right">
-    <p class="text-slate-400 text-xs font-bold font-mono uppercase">${event.date}</p>
-    <p class="text-blue-500 text-[10px] font-black uppercase mt-1">${event.time || ''}</p>
-</div>
+                                <p class="text-slate-400 text-xs font-bold font-mono uppercase">${date}</p>
+                                <p class="text-blue-500 text-[10px] font-black uppercase mt-1">${time}</p>
+                            </div>
                         </div>
-                        <h4 class="text-xl font-bold text-slate-900 mb-3 leading-tight">${event.title}</h4>
-                        <p class="text-slate-500 text-sm leading-relaxed mb-8 flex-grow">${event.description || ''}</p>
+                        <h4 class="text-xl font-bold text-slate-900 mb-3 leading-tight">${title}</h4>
+                        <p class="text-slate-500 text-sm leading-relaxed mb-8 flex-grow">${description}</p>
                         <div class="pt-5 border-t border-slate-50 flex justify-between items-center">
                             <span class="text-[10px] font-black ${isPast ? 'text-slate-300' : 'text-blue-500'} uppercase tracking-tighter">
                                 ${isPast ? 'Completed' : 'Happening Soon'}
@@ -115,21 +128,22 @@
             });
         }
 
-        // 3. Search Bar logic
         function filterEvents() {
             const query = document.getElementById('eventSearch').value.toLowerCase();
-            const filtered = allEvents.filter(e => 
-                e.title.toLowerCase().includes(query) || 
-                (e.category && e.category.toLowerCase().includes(query)) ||
-                (e.description && e.description.toLowerCase().includes(query))
-            );
+            const filtered = allEvents.filter(e => {
+                // PROTECTION: Check if properties exist before calling .toLowerCase()
+                const t = (e.title || "").toLowerCase();
+                const c = (e.category || "").toLowerCase();
+                const d = (e.description || "").toLowerCase();
+                return t.includes(query) || c.includes(query) || d.includes(query);
+            });
             renderEvents(filtered);
         }
 
-        // Clock & Initial Load
         setInterval(() => {
             const now = new Date();
-            document.getElementById('live-clock').innerText = now.toLocaleTimeString();
+            const clock = document.getElementById('live-clock');
+            if(clock) clock.innerText = now.toLocaleTimeString();
         }, 1000);
 
         fetchEvents();
