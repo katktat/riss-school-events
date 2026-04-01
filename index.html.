@@ -6,7 +6,7 @@
     <title>RISS School Event Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .event-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .event-card { transition: all 0.3s ease; }
         .event-card:hover { transform: translateY(-4px); box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1); }
     </style>
 </head>
@@ -15,167 +15,78 @@
     <nav class="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50">
         <div class="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
             <h1 class="text-2xl font-black text-blue-600 tracking-tighter">RISS HUB.</h1>
-            <div id="live-clock" class="text-xs font-mono text-slate-400 hidden md:block"></div>
+            <div id="live-clock" class="text-xs font-mono text-slate-400"></div>
         </div>
     </nav>
 
     <main class="max-w-6xl mx-auto px-6 pt-12">
         <header class="mb-12">
-            <h2 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">What's happening?</h2>
-            <p class="text-slate-500 text-lg max-w-2xl">Your central platform for school activities. Information is organized and updated in real-time.</p>
+            <h2 class="text-4xl font-extrabold tracking-tight mb-4 text-slate-900">What's happening?</h2>
+            <p class="text-slate-500 text-lg">Connected live to the School Event Forms.</p>
         </header>
 
-        <div class="relative mb-16">
-            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <span class="text-slate-400 text-xl">🔍</span>
+        <div id="event-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div class="col-span-full py-20 text-center text-slate-400 animate-pulse">
+                Syncing with school database...
             </div>
-            <input type="text" id="eventSearch" onkeyup="filterEvents()" 
-                placeholder="Search by event name, category, or keyword..." 
-                class="w-full p-5 pl-14 rounded-2xl border-none bg-white shadow-xl shadow-slate-200/50 focus:ring-4 focus:ring-blue-100 outline-none transition-all text-lg">
-        </div>
-
-        <div class="space-y-16">
-            <section>
-                <div class="flex items-center space-x-3 mb-8">
-                    <span class="flex h-3 w-3 rounded-full bg-green-500 animate-ping"></span>
-                    <h3 class="text-xl font-bold tracking-tight">Upcoming Activities</h3>
-                </div>
-                <div id="upcoming-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    <div class="col-span-full py-10 text-center text-slate-400">Loading events...</div>
-                </div>
-            </section>
-
-            <section>
-                <div class="flex items-center space-x-3 mb-8 opacity-50">
-                    <span class="h-3 w-3 rounded-full bg-slate-300"></span>
-                    <h3 class="text-xl font-bold tracking-tight">Archive</h3>
-                </div>
-                <div id="past-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 opacity-60 grayscale-[0.5]"></div>
-            </section>
         </div>
     </main>
 
     <script>
-        let allEvents = [];
-
-        async function fetchEvents() {
+        async function loadEvents() {
+            const container = document.getElementById('event-container');
             try {
-                // ADDED: Cache-buster (?t=...) ensures Chrome doesn't show old data
+                // Fetching the file Power Automate creates
                 const response = await fetch('events.json?t=' + new Date().getTime());
-                if (!response.ok) throw new Error("File not found");
+                if (!response.ok) throw new Error("Data file not found");
+                
+                const data = await response.json();
+                container.innerHTML = ''; // Clear loading message
 
-                console.log("Bridge connected! Found data:", response);
-                allEvents = await response.json();
-                renderEvents(allEvents);
+                if (data.length === 0) {
+                    container.innerHTML = '<div class="col-span-full text-center p-10 bg-white rounded-2xl border-2 border-dashed">No events found. Submit the Microsoft Form to see them here!</div>';
+                    return;
+                }
+
+                data.forEach(event => {
+                    // This creates the card using the keys from your Power Automate 'Select' box
+                    const card = document.createElement('div');
+                    card.className = "event-card bg-white p-7 rounded-3xl border border-slate-100 shadow-sm flex flex-col h-full";
+                    
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start mb-5">
+                            <span class="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-widest rounded-lg">
+                                ${event.category || 'Activity'}
+                            </span>
+                            <div class="text-right">
+                                <p class="text-slate-400 text-xs font-bold font-mono">${event.date || 'TBD'}</p>
+                            </div>
+                        </div>
+                        <h4 class="text-xl font-bold text-slate-900 mb-3">${event.title || 'New Event'}</h4>
+                        <p class="text-slate-500 text-sm mb-8 flex-grow">${event.description || ''}</p>
+                        <div class="pt-5 border-t border-slate-50">
+                            <span class="text-[10px] font-black text-blue-500 uppercase">Live from Forms</span>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+
             } catch (error) {
-                console.error("Connection Error:", error);
-                document.getElementById('upcoming-list').innerHTML = `
-                    <div class="col-span-full py-10 text-center text-slate-400 border-2 border-dashed border-slate-200 rounded-2xl">
-                        Waiting for data sync from Excel... (Make sure events.json exists)
+                container.innerHTML = `
+                    <div class="col-span-full p-10 bg-red-50 text-red-600 rounded-2xl border border-red-100 text-center">
+                        <strong>Connection Error:</strong> Could not find 'events.json'. <br>
+                        Check if the file exists in your GitHub repository.
                     </div>`;
             }
         }
 
-      function renderEvents(data) {
-            const upcomingList = document.getElementById('upcoming-list');
-            const pastList = document.getElementById('past-list');
-
-            // 1. Clear the "Loading..." text
-            upcomingList.innerHTML = '';
-            pastList.innerHTML = '';
-
-            // 2. If no data, show a message
-            if (!data || data.length === 0) {
-                upcomingList.innerHTML = '<div class="col-span-full text-center text-slate-400">No events found in the system.</div>';
-                return;
-            }
-
-            // 3. Create the cards
-            data.forEach(event => {
-                const card = `
-                    <div class="event-card bg-white p-7 rounded-3xl border border-slate-100 shadow-sm flex flex-col h-full">
-                        <div class="flex justify-between items-start mb-5">
-                            <span class="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-widest rounded-lg">${event.category || 'General'}</span>
-                            <div class="text-right">
-                                <p class="text-slate-400 text-xs font-bold font-mono uppercase">${event.date || 'TBD'}</p>
-                                <p class="text-blue-500 text-[10px] font-black uppercase mt-1">${event.time || ''}</p>
-                            </div>
-                        </div>
-                        <h4 class="text-xl font-bold text-slate-900 mb-3 leading-tight">${event.title || 'Untitled'}</h4>
-                        <p class="text-slate-500 text-sm leading-relaxed mb-8 flex-grow">${event.description || ''}</p>
-                        <div class="pt-5 border-t border-slate-50 flex justify-between items-center">
-                            <span class="text-[10px] font-black text-blue-500 uppercase tracking-tighter">Happening Soon</span>
-                        </div>
-                    </div>
-                `;
-                upcomingList.innerHTML += card;
-            });
-        }
-
-            if (data.length === 0) {
-                upcomingList.innerHTML = '<div class="col-span-full text-center text-slate-400">No events found.</div>';
-                return;
-            }
-
-            // Sort by date
-            data.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-            data.forEach(event => {
-                // PROTECTION: Ensures code doesn't break if a field is empty
-                const title = event.title || "Untitled Event";
-                const category = event.category || "General";
-                const date = event.date || "TBD";
-                const time = event.time || "";
-                const description = event.description || "";
-                
-                const isPast = date < today && date !== "TBD";
-                
-                const card = `
-                    <div class="event-card bg-white p-7 rounded-3xl border border-slate-100 shadow-sm flex flex-col h-full">
-                        <div class="flex justify-between items-start mb-5">
-                            <span class="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-widest rounded-lg">${category}</span>
-                            <div class="text-right">
-                                <p class="text-slate-400 text-xs font-bold font-mono uppercase">${date}</p>
-                                <p class="text-blue-500 text-[10px] font-black uppercase mt-1">${time}</p>
-                            </div>
-                        </div>
-                        <h4 class="text-xl font-bold text-slate-900 mb-3 leading-tight">${title}</h4>
-                        <p class="text-slate-500 text-sm leading-relaxed mb-8 flex-grow">${description}</p>
-                        <div class="pt-5 border-t border-slate-50 flex justify-between items-center">
-                            <span class="text-[10px] font-black ${isPast ? 'text-slate-300' : 'text-blue-500'} uppercase tracking-tighter">
-                                ${isPast ? 'Completed' : 'Happening Soon'}
-                            </span>
-                        </div>
-                    </div>
-                `;
-
-                if (isPast) {
-                    pastList.innerHTML += card;
-                } else {
-                    upcomingList.innerHTML += card;
-                }
-            });
-        }
-
-        function filterEvents() {
-            const query = document.getElementById('eventSearch').value.toLowerCase();
-            const filtered = allEvents.filter(e => {
-                // PROTECTION: Check if properties exist before calling .toLowerCase()
-                const t = (e.title || "").toLowerCase();
-                const c = (e.category || "").toLowerCase();
-                const d = (e.description || "").toLowerCase();
-                return t.includes(query) || c.includes(query) || d.includes(query);
-            });
-            renderEvents(filtered);
-        }
-
+        // Live Clock
         setInterval(() => {
-            const now = new Date();
-            const clock = document.getElementById('live-clock');
-            if(clock) clock.innerText = now.toLocaleTimeString();
+            document.getElementById('live-clock').innerText = new Date().toLocaleTimeString();
         }, 1000);
 
-        fetchEvents();
+        // Run the fetch
+        loadEvents();
     </script>
 </body>
 </html>
