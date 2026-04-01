@@ -76,13 +76,41 @@
             }
         }
 
-        function renderEvents(data) {
+      function renderEvents(data) {
             const upcomingList = document.getElementById('upcoming-list');
             const pastList = document.getElementById('past-list');
-            const today = new Date().toISOString().split('T')[0];
 
+            // 1. Clear the "Loading..." text
             upcomingList.innerHTML = '';
             pastList.innerHTML = '';
+
+            // 2. If no data, show a message
+            if (!data || data.length === 0) {
+                upcomingList.innerHTML = '<div class="col-span-full text-center text-slate-400">No events found in the system.</div>';
+                return;
+            }
+
+            // 3. Create the cards
+            data.forEach(event => {
+                const card = `
+                    <div class="event-card bg-white p-7 rounded-3xl border border-slate-100 shadow-sm flex flex-col h-full">
+                        <div class="flex justify-between items-start mb-5">
+                            <span class="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-widest rounded-lg">${event.category || 'General'}</span>
+                            <div class="text-right">
+                                <p class="text-slate-400 text-xs font-bold font-mono uppercase">${event.date || 'TBD'}</p>
+                                <p class="text-blue-500 text-[10px] font-black uppercase mt-1">${event.time || ''}</p>
+                            </div>
+                        </div>
+                        <h4 class="text-xl font-bold text-slate-900 mb-3 leading-tight">${event.title || 'Untitled'}</h4>
+                        <p class="text-slate-500 text-sm leading-relaxed mb-8 flex-grow">${event.description || ''}</p>
+                        <div class="pt-5 border-t border-slate-50 flex justify-between items-center">
+                            <span class="text-[10px] font-black text-blue-500 uppercase tracking-tighter">Happening Soon</span>
+                        </div>
+                    </div>
+                `;
+                upcomingList.innerHTML += card;
+            });
+        }
 
             if (data.length === 0) {
                 upcomingList.innerHTML = '<div class="col-span-full text-center text-slate-400">No events found.</div>';
