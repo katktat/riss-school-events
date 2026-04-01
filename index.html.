@@ -63,7 +63,8 @@
                 // ADDED: Cache-buster (?t=...) ensures Chrome doesn't show old data
                 const response = await fetch('events.json?t=' + new Date().getTime());
                 if (!response.ok) throw new Error("File not found");
-                
+
+                console.log("Bridge connected! Found data:", response);
                 allEvents = await response.json();
                 renderEvents(allEvents);
             } catch (error) {
