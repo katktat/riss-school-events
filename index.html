@@ -58,7 +58,7 @@
                 if (!response.ok) throw new Error("File not found");
                 let data = await response.json();
                 
-                // FIX: Ensure data is an array so it can show multiple events
+                // Ensure data is always treated as a list
                 if (!Array.isArray(data)) {
                     data = [data];
                 }
@@ -88,20 +88,24 @@
                 });
 
             } catch (error) {
-                upcomingContainer.innerHTML = `<div class="text-red-400 p-10 bg-white rounded-3xl border w-full text-center font-bold uppercase tracking-widest text-xs">Waiting for new events...</div>`;
+                upcomingContainer.innerHTML = `<div class="text-red-400 p-10 bg-white rounded-3xl border w-full text-center font-bold uppercase tracking-widest text-xs">Update required or no events found.</div>`;
                 console.error(error);
             }
         }
 
         function createEventCard(event, isUpcoming) {
-            // MATCHING YOUR SCREENSHOT EXACTLY
-            const loc = event.location || event.Location || 'Room TBD';
-            const start = event.startTime || event['startTime'] || ''; 
-            const end = event.endingTime || event['endingTime'] || ''; 
+            // Aggressive key checking for Location
+            const loc = event.location || event.Location || event.Where || 'Room TBD';
+            
+            // Aggressive key checking for Start Time
+            const start = event.startTime || event['startTime'] || event['start time'] || event.Start || ''; 
+            
+            // Aggressive key checking for Ending Time (matches your screenshot keys)
+            const end = event.endingTime || event['endingTime'] || event['ending time'] || event.endTime || event['ending time'] || ''; 
             
             const date = event.date || event.Date || 'No Date';
             
-            // Logic to combine Start and End times
+            // Format the time display string
             let timeDisplay = 'Time TBD';
             if (start && end) {
                 timeDisplay = `${start} - ${end}`;
