@@ -24,27 +24,27 @@
 
     <main class="max-w-7xl mx-auto px-6 pt-12">
         <header class="mb-12">
-            <h2 class="text-5xl font-black tracking-tight mb-2 text-slate-900">What's happening?</h2>
-            <p class="text-slate-500 text-lg">Real-time school activity updates.</p>
+            <h2 class="text-5xl font-black tracking-tight mb-2 text-slate-900">School Activities</h2>
+            <p class="text-slate-500 text-lg">Live feed from Microsoft Forms.</p>
         </header>
 
         <section class="mb-20">
             <div class="flex items-center gap-4 mb-8">
-                <h3 class="text-xs font-black uppercase tracking-[0.2em] text-blue-500">Live & Upcoming</h3>
+                <h3 class="text-xs font-black uppercase tracking-[0.2em] text-blue-500 tracking-widest">Upcoming</h3>
                 <span class="h-px bg-slate-200 flex-grow"></span>
             </div>
             
             <div id="upcoming-container" class="flex flex-row gap-6 overflow-x-auto pb-8 no-scrollbar">
-                <div class="w-full text-center py-20 text-slate-300 animate-pulse">Syncing database...</div>
+                <div class="w-full text-center py-20 text-slate-300 animate-pulse font-mono text-xs">Loading Data...</div>
             </div>
         </section>
 
         <section>
             <div class="flex items-center gap-4 mb-8">
-                <h3 class="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Archive</h3>
+                <h3 class="text-xs font-black uppercase tracking-[0.2em] text-slate-400 tracking-widest">Archive</h3>
                 <span class="h-px bg-slate-200 flex-grow"></span>
             </div>
-            <div id="archive-container" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 opacity-50"></div>
+            <div id="archive-container" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 opacity-40"></div>
         </section>
     </main>
 
@@ -55,22 +55,26 @@
             
             try {
                 const response = await fetch('events.json?t=' + new Date().getTime());
+                if (!response.ok) throw new Error("File not found");
                 const data = await response.json();
                 
                 upcomingContainer.innerHTML = ''; 
                 archiveContainer.innerHTML = '';
 
-                const upcomingData = data.filter(e => (e.status || e.Status) !== "Archive");
-                const archiveData = data.filter(e => (e.status || e.Status) === "Archive");
+                // Identify Status
+                const upcomingData = data.filter(e => (e.status || e.Status || '').toLowerCase() !== "archive");
+                const archiveData = data.filter(e => (e.status || e.Status || '').toLowerCase() === "archive");
 
+                // Identify Categories
                 const categories = [...new Set(upcomingData.map(e => e.category || e.Category || 'General'))];
                 
                 categories.forEach(cat => {
                     const col = document.createElement('div');
                     col.className = "category-group space-y-4";
-                    col.innerHTML = `<h4 class="font-black text-[10px] uppercase tracking-widest text-slate-400 mb-6 px-2">${cat}</h4>`;
+                    col.innerHTML = `<h4 class="font-black text-[10px] uppercase tracking-widest text-slate-400 mb-6 px-2 underline decoration-blue-500/30 decoration-2 underline-offset-8">${cat}</h4>`;
 
-                    upcomingData.filter(e => (e.category || e.Category || 'General') === cat).forEach(event => {
+                    const catEvents = upcomingData.filter(e => (e.category || e.Category || 'General') === cat);
+                    catEvents.forEach(event => {
                         col.innerHTML += createEventCard(event, true);
                     });
                     upcomingContainer.appendChild(col);
@@ -81,48 +85,54 @@
                 });
 
             } catch (error) {
-                upcomingContainer.innerHTML = `<div class="text-red-400 p-10 bg-white rounded-3xl border w-full text-center">Check if events.json is uploaded to GitHub.</div>`;
+                upcomingContainer.innerHTML = `<div class="text-red-400 p-10 bg-white rounded-3xl border w-full text-center">Update Error: ${error.message}</div>`;
             }
         }
 
         function createEventCard(event, isUpcoming) {
-            // This part maps your Excel data to the website display
-            // If it's blank, check your Power Automate "Key" names!
-            const loc = event.location || event.Location || 'TBD';
+            // Mapping the data - this handles lowercase or uppercase names from Excel
+            const loc = event.location || event.Location || event.Where || event.Room || 'Room TBD';
             const start = event.startTime || event.StartTime || event.Start || '';
             const end = event.endTime || event.EndTime || event.End || '';
-            const time = (start && end) ? `${start} - ${end}` : (start || 'Time TBD');
             const date = event.date || event.Date || 'No Date';
+            
+            const timeDisplay = (start && end) ? `${start} - ${end}` : (start || 'Time TBD');
 
+            // THE HTML TEMPLATE - I have made the Location/Time bold and obvious
             return `
                 <div class="event-card bg-white p-6 border border-slate-100 shadow-sm flex flex-col h-full">
                     <div class="flex justify-between items-start mb-4">
-                        <span class="text-[10px] font-bold font-mono text-blue-500">${date}</span>
-                        ${!isUpcoming ? '<span class="text-[8px] bg-slate-100 px-2 py-0.5 rounded text-slate-400 uppercase font-black tracking-tighter">History</span>' : ''}
+                        <span class="text-[10px] font-bold font-mono text-blue-600 bg-blue-50 px-2 py-1 rounded-md tracking-tighter">${date}</span>
                     </div>
                     
-                    <h4 class="text-lg font-bold text-slate-900 mb-2 leading-tight">${event.title || event.Title || 'New Event'}</h4>
+                    <h4 class="text-lg font-black text-slate-900 mb-4 leading-tight lowercase first-letter:uppercase">${event.title || event.Title || 'Untitled Event'}</h4>
                     
-                    <div class="space-y-1 mb-4">
-                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter flex items-center gap-1">
-                            <span>📍</span> ${loc}
+                    <div class="bg-slate-50/50 rounded-xl p-3 space-y-2 mb-4 border border-slate-100/50">
+                        <div class="text-[10px] font-bold text-slate-600 uppercase tracking-tight flex items-center gap-2">
+                            <span class="text-lg">📍</span> 
+                            <span>Location: <span class="text-blue-600 font-black">${loc}</span></span>
                         </div>
-                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter flex items-center gap-1">
-                            <span>⏰</span> ${time}
+                        <div class="text-[10px] font-bold text-slate-600 uppercase tracking-tight flex items-center gap-2">
+                            <span class="text-lg">⏰</span> 
+                            <span>Time: <span class="text-blue-600 font-black">${timeDisplay}</span></span>
                         </div>
                     </div>
 
-                    <p class="text-slate-500 text-xs leading-relaxed flex-grow">${event.description || event.Description || ''}</p>
+                    <p class="text-slate-500 text-xs leading-relaxed flex-grow italic mb-6">
+                        ${event.description || event.Description || 'No description provided.'}
+                    </p>
                     
-                    <div class="mt-6 pt-4 border-t border-slate-50">
-                        <span class="text-[9px] font-black text-slate-200 uppercase tracking-[0.2em]">RISS Hub</span>
+                    <div class="pt-4 border-t border-slate-100 flex items-center justify-between">
+                         <span class="text-[8px] font-black text-slate-300 uppercase tracking-widest">RISS OFFICIAL</span>
+                         <div class="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
                     </div>
                 </div>
             `;
         }
 
         setInterval(() => {
-            document.getElementById('live-clock').innerText = new Date().toLocaleTimeString();
+            const clock = document.getElementById('live-clock');
+            if(clock) clock.innerText = new Date().toLocaleTimeString();
         }, 1000);
 
         loadEvents();
