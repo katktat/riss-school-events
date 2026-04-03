@@ -8,84 +8,112 @@
     <style>
         .event-card { transition: all 0.3s ease; }
         .event-card:hover { transform: translateY(-4px); box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1); }
+        /* Ensures columns stay side-by-side on desktop */
+        .category-group { min-width: 300px; flex: 1; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 font-sans min-h-screen pb-20">
 
     <nav class="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50">
-        <div class="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
             <h1 class="text-2xl font-black text-blue-600 tracking-tighter">RISS HUB.</h1>
             <div id="live-clock" class="text-xs font-mono text-slate-400"></div>
         </div>
     </nav>
 
-    <main class="max-w-6xl mx-auto px-6 pt-12">
+    <main class="max-w-7xl mx-auto px-6 pt-12">
         <header class="mb-12">
             <h2 class="text-4xl font-extrabold tracking-tight mb-4 text-slate-900">What's happening?</h2>
             <p class="text-slate-500 text-lg">Connected live to the School Event Forms.</p>
         </header>
 
-        <div id="event-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <div class="col-span-full py-20 text-center text-slate-400 animate-pulse">
-                Syncing with school database...
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-8">
+                <span class="h-px bg-slate-200 flex-grow"></span>
+                <h3 class="text-sm font-black uppercase tracking-widest text-blue-500">Upcoming Events</h3>
+                <span class="h-px bg-slate-200 flex-grow"></span>
             </div>
-        </div>
+            <div id="upcoming-container" class="flex flex-col md:flex-row gap-8 overflow-x-auto pb-4">
+                <p class="text-slate-400 animate-pulse">Syncing database...</p>
+            </div>
+        </section>
+
+        <section>
+            <div class="flex items-center gap-4 mb-8">
+                <span class="h-px bg-slate-200 flex-grow"></span>
+                <h3 class="text-sm font-black uppercase tracking-widest text-slate-400">Archive</h3>
+                <span class="h-px bg-slate-200 flex-grow"></span>
+            </div>
+            <div id="archive-container" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 opacity-60">
+                </div>
+        </section>
     </main>
 
     <script>
         async function loadEvents() {
-            const container = document.getElementById('event-container');
+            const upcomingContainer = document.getElementById('upcoming-container');
+            const archiveContainer = document.getElementById('archive-container');
+            
             try {
-                // Fetching the file Power Automate creates
                 const response = await fetch('events.json?t=' + new Date().getTime());
                 if (!response.ok) throw new Error("Data file not found");
                 
                 const data = await response.json();
-                container.innerHTML = ''; // Clear loading message
+                upcomingContainer.innerHTML = ''; 
+                archiveContainer.innerHTML = '';
 
                 if (data.length === 0) {
-                    container.innerHTML = '<div class="col-span-full text-center p-10 bg-white rounded-2xl border-2 border-dashed">No events found. Submit the Microsoft Form to see them here!</div>';
+                    upcomingContainer.innerHTML = '<div class="w-full text-center p-10 bg-white rounded-2xl border-2 border-dashed">No events found.</div>';
                     return;
                 }
 
-                data.forEach(event => {
-                    // This creates the card using the keys from your Power Automate 'Select' box
-                    const card = document.createElement('div');
-                    card.className = "event-card bg-white p-7 rounded-3xl border border-slate-100 shadow-sm flex flex-col h-full";
-                    
-                    card.innerHTML = `
-                        <div class="flex justify-between items-start mb-5">
-                            <span class="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-widest rounded-lg">
-                                ${event.category || 'Activity'}
-                            </span>
-                            <div class="text-right">
-                                <p class="text-slate-400 text-xs font-bold font-mono">${event.date || 'TBD'}</p>
-                            </div>
-                        </div>
-                        <h4 class="text-xl font-bold text-slate-900 mb-3">${event.title || 'New Event'}</h4>
-                        <p class="text-slate-500 text-sm mb-8 flex-grow">${event.description || ''}</p>
-                        <div class="pt-5 border-t border-slate-50">
-                            <span class="text-[10px] font-black text-blue-500 uppercase">Live from Forms</span>
-                        </div>
-                    `;
-                    container.appendChild(card);
+                // 1. SPLIT DATA INTO UPCOMING VS ARCHIVE
+                const upcomingData = data.filter(e => e.status === "Upcoming" || !e.status);
+                const archiveData = data.filter(e => e.status === "Archive");
+
+                // 2. RENDER UPCOMING (Categorized into Columns)
+                const categories = [...new Set(upcomingData.map(e => e.category || 'General'))];
+                
+                categories.forEach(cat => {
+                    const col = document.createElement('div');
+                    col.className = "category-group space-y-6";
+                    col.innerHTML = `<h4 class="font-bold text-slate-400 text-xs uppercase mb-4 px-2">${cat}</h4>`;
+
+                    upcomingData.filter(e => (e.category || 'General') === cat).forEach(event => {
+                        col.innerHTML += createEventCard(event, true);
+                    });
+                    upcomingContainer.appendChild(col);
+                });
+
+                // 3. RENDER ARCHIVE (Simple Grid)
+                archiveData.forEach(event => {
+                    archiveContainer.innerHTML += createEventCard(event, false);
                 });
 
             } catch (error) {
-                container.innerHTML = `
-                    <div class="col-span-full p-10 bg-red-50 text-red-600 rounded-2xl border border-red-100 text-center">
-                        <strong>Connection Error:</strong> Could not find 'events.json'. <br>
-                        Check if the file exists in your GitHub repository.
-                    </div>`;
+                upcomingContainer.innerHTML = `<div class="text-red-500">Error loading events: ${error.message}</div>`;
             }
+        }
+
+        function createEventCard(event, isUpcoming) {
+            return `
+                <div class="event-card bg-white p-6 rounded-3xl border border-slate-100 shadow-sm mb-4">
+                    <div class="flex justify-between items-start mb-3">
+                        <span class="text-[10px] font-mono text-slate-400 font-bold">${event.date || 'TBD'}</span>
+                        ${!isUpcoming ? '<span class="text-[9px] bg-slate-100 px-2 py-0.5 rounded text-slate-400 uppercase font-black">Passed</span>' : ''}
+                    </div>
+                    <h4 class="text-lg font-bold text-slate-900 mb-2">${event.title || 'New Event'}</h4>
+                    <p class="text-slate-500 text-xs leading-relaxed">${event.description || ''}</p>
+                </div>
+            `;
         }
 
         // Live Clock
         setInterval(() => {
-            document.getElementById('live-clock').innerText = new Date().toLocaleTimeString();
+            const clock = document.getElementById('live-clock');
+            if(clock) clock.innerText = new Date().toLocaleTimeString();
         }, 1000);
 
-        // Run the fetch
         loadEvents();
     </script>
 </body>
