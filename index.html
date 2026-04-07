@@ -58,7 +58,6 @@
                 if (!response.ok) throw new Error("File not found");
                 let data = await response.json();
                 
-                // Ensure data is always treated as a list
                 if (!Array.isArray(data)) {
                     data = [data];
                 }
@@ -94,18 +93,11 @@
         }
 
         function createEventCard(event, isUpcoming) {
-            // Aggressive key checking for Location
             const loc = event.location || event.Location || event.Where || 'Room TBD';
-            
-            // Aggressive key checking for Start Time
             const start = event.startTime || event['startTime'] || event['start time'] || event.Start || ''; 
-            
-            // Aggressive key checking for Ending Time (matches your screenshot keys)
-            const end = event.endingTime || event['endingTime'] || event['ending time'] || event.endTime || event['ending time'] || ''; 
-            
+            const end = event.endingTime || event['endingTime'] || event['ending time'] || event.endTime || ''; 
             const date = event.date || event.Date || 'No Date';
             
-            // Format the time display string
             let timeDisplay = 'Time TBD';
             if (start && end) {
                 timeDisplay = `${start} - ${end}`;
@@ -114,7 +106,7 @@
             }
 
             return `
-                <div class="event-card bg-white p-6 border border-slate-100 shadow-sm flex flex-col h-full min-w-[320px]">
+                <div class="event-card bg-white p-6 border border-slate-100 shadow-sm flex flex-col min-w-[320px] mb-4">
                     <div class="flex justify-between items-start mb-4">
                         <span class="text-[10px] font-bold font-mono text-blue-600 bg-blue-50 px-2 py-1 rounded-md tracking-tighter">${date}</span>
                     </div>
@@ -132,7 +124,7 @@
                         </div>
                     </div>
 
-                    <p class="text-slate-500 text-xs leading-relaxed flex-grow italic mb-6">
+                    <p class="text-slate-500 text-xs leading-relaxed italic h-auto mb-6">
                         ${event.description || 'No description provided.'}
                     </p>
                     
