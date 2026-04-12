@@ -9,7 +9,6 @@
         .event-card { transition: all 0.3s ease; border-radius: 24px; width: 100%; }
         .event-card:hover { transform: translateY(-4px); box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1); }
         
-        /* Horizontal layout for categories */
         .category-container {
             display: flex;
             flex-direction: row;
@@ -51,4 +50,112 @@
             <p class="text-slate-500 text-lg">Live Events From Microsoft Forms.</p>
         </header>
 
-        <section class="mb-
+        <section class="mb-20">
+            <div class="flex items-center gap-4 mb-8">
+                <h3 class="text-xs font-black uppercase tracking-[0.2em] text-blue-500 tracking-widest">Upcoming</h3>
+                <span class="h-px bg-slate-200 flex-grow"></span>
+            </div>
+            
+            <div id="upcoming-container" class="category-container no-scrollbar">
+                <div class="w-full text-center py-20 text-slate-300 animate-pulse font-mono text-xs text-center">Loading Data...</div>
+            </div>
+        </section>
+
+        <section>
+            <div class="flex items-center gap-4 mb-8">
+                <h3 class="text-xs font-black uppercase tracking-[0.2em] text-slate-400 tracking-widest">Archive</h3>
+                <span class="h-px bg-slate-200 flex-grow"></span>
+            </div>
+            <div id="archive-container" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 opacity-40"></div>
+        </section>
+    </main>
+
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log("System Initialized");
+            loadEvents();
+        });
+
+        async function loadEvents() {
+            const upcomingContainer = document.getElementById('upcoming-container');
+            const archiveContainer = document.getElementById('archive-container');
+            
+            try {
+                const response = await fetch('./events.json?v=' + new Date().getTime());
+                
+                if (!response.ok) throw new Error("File not found");
+                
+                const rawData = await response.json();
+                const data = Array.isArray(rawData) ? rawData : [rawData];
+                
+                upcomingContainer.innerHTML = ''; 
+                archiveContainer.innerHTML = '';
+
+                if (!data || data.length === 0 || data[0] === null) {
+                    upcomingContainer.innerHTML = '<div class="w-full text-center py-10 text-slate-400">No events found.</div>';
+                    return;
+                }
+
+                const upcomingData = data.filter(e => (e.status || e.Status || '').toLowerCase() !== "archive");
+                const archiveData = data.filter(e => (e.status || e.Status || '').toLowerCase() === "archive");
+
+                const categories = [...new Set(upcomingData.map(e => e.category || e.Category || 'General'))];
+                
+                categories.forEach(cat => {
+                    const col = document.createElement('div');
+                    col.className = "category-group";
+                    col.innerHTML = `<h4 class="font-black text-[10px] uppercase tracking-widest text-slate-400 mb-2 px-2 underline decoration-blue-500/30 decoration-2 underline-offset-8">${cat}</h4>`;
+                    
+                    const catEvents = upcomingData.filter(e => (e.category || e.Category || 'General') === cat);
+                    catEvents.forEach(event => {
+                        col.innerHTML += createEventCard(event);
+                    });
+                    upcomingContainer.appendChild(col);
+                });
+
+                archiveData.forEach(event => {
+                    archiveContainer.innerHTML += createEventCard(event);
+                });
+
+            } catch (error) {
+                console.error("Error:", error);
+                upcomingContainer.innerHTML = `<div class="text-red-400 p-10 bg-white rounded-3xl border w-full text-center font-bold uppercase tracking-widest text-[10px]">Fetch Error: ${error.message}</div>`;
+            }
+        }
+
+        function createEventCard(event) {
+            const title = event.title || event.Title || 'Untitled Event';
+            const loc = event.location || event.Location || 'Room TBD';
+            const start = event.startTime || event.StartTime || ''; 
+            const end = event.endTime || event.EndTime || event.endingTime || event.EndingTime || ''; 
+            const date = event.date || event.Date || 'No Date';
+            const desc = event.description || event.Description || 'No description provided.';
+            
+            let timeDisplay = (start && end) ? `${start} - ${end}` : (start || 'Time TBD');
+
+            return `
+                <div class="event-card bg-white p-6 border border-slate-100 shadow-sm flex flex-col">
+                    <div class="flex justify-between items-start mb-4">
+                        <span class="text-[10px] font-bold font-mono text-blue-600 bg-blue-50 px-2 py-1 rounded-md tracking-tighter">${date}</span>
+                    </div>
+                    <h4 class="text-lg font-black text-slate-900 mb-4 leading-tight lowercase first-letter:uppercase">${title}</h4>
+                    <div class="bg-slate-50/50 rounded-xl p-3 space-y-2 mb-4 border border-slate-100/50">
+                        <div class="text-[10px] font-bold text-slate-600 uppercase tracking-tight flex items-center gap-2">
+                            <span>📍</span> <span>Location: <span class="text-blue-600 font-black">${loc}</span></span>
+                        </div>
+                        <div class="text-[10px] font-bold text-slate-600 uppercase tracking-tight flex items-center gap-2">
+                            <span>⏰</span> <span>Time: <span class="text-blue-600 font-black">${timeDisplay}</span></span>
+                        </div>
+                    </div>
+                    <p class="text-slate-500 text-xs leading-relaxed italic mb-6">${desc}</p>
+                </div>
+            `;
+        }
+
+        setInterval(() => {
+            const clock = document.getElementById('live-clock');
+            if(clock) clock.innerText = new Date().toLocaleTimeString();
+        }, 1000);
+    </script>
+</body>
+</html>
