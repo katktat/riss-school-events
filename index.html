@@ -51,41 +51,4 @@
             <p class="text-slate-500 text-lg">Live Events From Microsoft Forms.</p>
         </header>
 
-        <section class="mb-20">
-            <div class="flex items-center gap-4 mb-8">
-                <h3 class="text-xs font-black uppercase tracking-[0.2em] text-blue-500 tracking-widest">Upcoming</h3>
-                <span class="h-px bg-slate-200 flex-grow"></span>
-            </div>
-            
-            <div id="upcoming-container" class="category-container no-scrollbar">
-                <div class="w-full text-center py-20 text-slate-300 animate-pulse font-mono text-xs text-center">Loading Data...</div>
-            </div>
-        </section>
-
-        <section>
-            <div class="flex items-center gap-4 mb-8">
-                <h3 class="text-xs font-black uppercase tracking-[0.2em] text-slate-400 tracking-widest">Archive</h3>
-                <span class="h-px bg-slate-200 flex-grow"></span>
-            </div>
-            <div id="archive-container" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 opacity-40"></div>
-        </section>
-    </main>
-
-    <script>
-        async function loadEvents() {
-            const upcomingContainer = document.getElementById('upcoming-container');
-            const archiveContainer = document.getElementById('archive-container');
-            
-            try {
-                // Fetch with a unique timestamp to bypass browser caching
-                const response = await fetch('./events.json?v=' + new Date().getTime());
-                
-                if (!response.ok) throw new Error("Could not find events.json");
-                
-                const rawData = await response.json();
-                const data = Array.isArray(rawData) ? rawData : [rawData];
-                
-                upcomingContainer.innerHTML = ''; 
-                archiveContainer.innerHTML = '';
-
-                if (data.length === 0 || data[0]
+        <section class="mb-
