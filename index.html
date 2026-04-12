@@ -57,7 +57,7 @@
             </div>
             
             <div id="upcoming-container" class="category-container no-scrollbar">
-                <div class="w-full text-center py-20 text-slate-300 animate-pulse font-mono text-xs text-center">Loading Data...</div>
+                <div class="w-full text-center py-20 text-slate-300 animate-pulse font-mono text-xs">Loading Data...</div>
             </div>
         </section>
 
@@ -71,34 +71,36 @@
     </main>
 
     <script>
-        window.addEventListener('DOMContentLoaded', () => {
-            console.log("System Initialized");
-            loadEvents();
-        });
-
+        // Use a standard function call to avoid DOM blockages
         async function loadEvents() {
             const upcomingContainer = document.getElementById('upcoming-container');
             const archiveContainer = document.getElementById('archive-container');
             
             try {
-                const response = await fetch('./events.json?v=' + new Date().getTime());
+                // Fetch with a cache-buster
+                const response = await fetch('./events.json?v=' + Date.now());
                 
-                if (!response.ok) throw new Error("File not found");
+                if (!response.ok) {
+                    throw new Error("Events file not found on server.");
+                }
                 
                 const rawData = await response.json();
                 const data = Array.isArray(rawData) ? rawData : [rawData];
                 
+                // Reset containers
                 upcomingContainer.innerHTML = ''; 
                 archiveContainer.innerHTML = '';
 
-                if (!data || data.length === 0 || data[0] === null) {
-                    upcomingContainer.innerHTML = '<div class="w-full text-center py-10 text-slate-400">No events found.</div>';
+                if (!data || data.length === 0 || !data[0]) {
+                    upcomingContainer.innerHTML = '<div class="w-full text-center py-10 text-slate-400">No events found in the database.</div>';
                     return;
                 }
 
+                // Sorting
                 const upcomingData = data.filter(e => (e.status || e.Status || '').toLowerCase() !== "archive");
                 const archiveData = data.filter(e => (e.status || e.Status || '').toLowerCase() === "archive");
 
+                // Render Upcoming Categories
                 const categories = [...new Set(upcomingData.map(e => e.category || e.Category || 'General'))];
                 
                 categories.forEach(cat => {
@@ -113,13 +115,14 @@
                     upcomingContainer.appendChild(col);
                 });
 
+                // Render Archive
                 archiveData.forEach(event => {
                     archiveContainer.innerHTML += createEventCard(event);
                 });
 
             } catch (error) {
-                console.error("Error:", error);
-                upcomingContainer.innerHTML = `<div class="text-red-400 p-10 bg-white rounded-3xl border w-full text-center font-bold uppercase tracking-widest text-[10px]">Fetch Error: ${error.message}</div>`;
+                console.error("Critical Error:", error);
+                upcomingContainer.innerHTML = `<div class="bg-red-50 text-red-500 p-8 rounded-3xl border border-red-100 w-full text-center font-bold uppercase tracking-widest text-[10px]">Error: ${error.message}</div>`;
             }
         }
 
@@ -141,17 +144,21 @@
                     <h4 class="text-lg font-black text-slate-900 mb-4 leading-tight lowercase first-letter:uppercase">${title}</h4>
                     <div class="bg-slate-50/50 rounded-xl p-3 space-y-2 mb-4 border border-slate-100/50">
                         <div class="text-[10px] font-bold text-slate-600 uppercase tracking-tight flex items-center gap-2">
-                            <span>📍</span> <span>Location: <span class="text-blue-600 font-black">${loc}</span></span>
+                            <span>📍</span> <span>${loc}</span>
                         </div>
                         <div class="text-[10px] font-bold text-slate-600 uppercase tracking-tight flex items-center gap-2">
-                            <span>⏰</span> <span>Time: <span class="text-blue-600 font-black">${timeDisplay}</span></span>
+                            <span>⏰</span> <span>${timeDisplay}</span>
                         </div>
                     </div>
-                    <p class="text-slate-500 text-xs leading-relaxed italic mb-6">${desc}</p>
+                    <p class="text-slate-500 text-xs leading-relaxed italic">${desc}</p>
                 </div>
             `;
         }
 
+        // Initialize
+        loadEvents();
+
+        // Clock
         setInterval(() => {
             const clock = document.getElementById('live-clock');
             if(clock) clock.innerText = new Date().toLocaleTimeString();
