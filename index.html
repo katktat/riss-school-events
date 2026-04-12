@@ -6,9 +6,32 @@
     <title>RISS School Events</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .event-card { transition: all 0.3s ease; border-radius: 24px; }
+        .event-card { transition: all 0.3s ease; border-radius: 24px; width: 100%; }
         .event-card:hover { transform: translateY(-4px); box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1); }
-        .category-group { min-width: 320px; flex: 1; background: #ffffff; border-radius: 28px; padding: 24px; border: 1px solid #f1f5f9; }
+        
+        /* Layout for vertical columns sitting next to each other */
+        .category-container {
+            display: flex;
+            flex-direction: row;
+            gap: 24px;
+            align-items: flex-start;
+            overflow-x: auto;
+            padding-bottom: 20px;
+        }
+
+        .category-group { 
+            min-width: 320px; 
+            max-width: 350px;
+            flex-shrink: 0;
+            background: #ffffff; 
+            border-radius: 28px; 
+            padding: 24px; 
+            border: 1px solid #f1f5f9; 
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
@@ -34,7 +57,7 @@
                 <span class="h-px bg-slate-200 flex-grow"></span>
             </div>
             
-            <div id="upcoming-container" class="flex flex-row gap-6 overflow-x-auto pb-8 no-scrollbar">
+            <div id="upcoming-container" class="category-container no-scrollbar">
                 <div class="w-full text-center py-20 text-slate-300 animate-pulse font-mono text-xs">Loading Data...</div>
             </div>
         </section>
@@ -44,104 +67,4 @@
                 <h3 class="text-xs font-black uppercase tracking-[0.2em] text-slate-400 tracking-widest">Archive</h3>
                 <span class="h-px bg-slate-200 flex-grow"></span>
             </div>
-            <div id="archive-container" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 opacity-40"></div>
-        </section>
-    </main>
-
-    <script>
-        async function loadEvents() {
-            const upcomingContainer = document.getElementById('upcoming-container');
-            const archiveContainer = document.getElementById('archive-container');
-            
-            try {
-                const response = await fetch('events.json?t=' + new Date().getTime());
-                if (!response.ok) throw new Error("File not found");
-                let data = await response.json();
-                
-                if (!Array.isArray(data)) {
-                    data = [data];
-                }
-                
-                upcomingContainer.innerHTML = ''; 
-                archiveContainer.innerHTML = '';
-
-                const upcomingData = data.filter(e => (e.status || e.Status || '').toLowerCase() !== "archive");
-                const archiveData = data.filter(e => (e.status || e.Status || '').toLowerCase() === "archive");
-
-                const categories = [...new Set(upcomingData.map(e => e.category || e.Category || 'General'))];
-                
-                categories.forEach(cat => {
-                    const col = document.createElement('div');
-                    col.className = "category-group space-y-4";
-                    col.innerHTML = `<h4 class="font-black text-[10px] uppercase tracking-widest text-slate-400 mb-6 px-2 underline decoration-blue-500/30 decoration-2 underline-offset-8">${cat}</h4>`;
-
-                    const catEvents = upcomingData.filter(e => (e.category || e.Category || 'General') === cat);
-                    catEvents.forEach(event => {
-                        col.innerHTML += createEventCard(event, true);
-                    });
-                    upcomingContainer.appendChild(col);
-                });
-
-                archiveData.forEach(event => {
-                    archiveContainer.innerHTML += createEventCard(event, false);
-                });
-
-            } catch (error) {
-                upcomingContainer.innerHTML = `<div class="text-red-400 p-10 bg-white rounded-3xl border w-full text-center font-bold uppercase tracking-widest text-xs">Update required or no events found.</div>`;
-                console.error(error);
-            }
-        }
-
-        function createEventCard(event, isUpcoming) {
-            const loc = event.location || event.Location || event.Where || 'Room TBD';
-            const start = event.startTime || event['startTime'] || event['start time'] || event.Start || ''; 
-            const end = event.endingTime || event['endingTime'] || event['ending time'] || event.endTime || ''; 
-            const date = event.date || event.Date || 'No Date';
-            
-            let timeDisplay = 'Time TBD';
-            if (start && end) {
-                timeDisplay = `${start} - ${end}`;
-            } else if (start) {
-                timeDisplay = start;
-            }
-
-            return `
-                <div class="event-card bg-white p-6 border border-slate-100 shadow-sm flex flex-col min-w-[320px] mb-4">
-                    <div class="flex justify-between items-start mb-4">
-                        <span class="text-[10px] font-bold font-mono text-blue-600 bg-blue-50 px-2 py-1 rounded-md tracking-tighter">${date}</span>
-                    </div>
-                    
-                    <h4 class="text-lg font-black text-slate-900 mb-4 leading-tight lowercase first-letter:uppercase">${event.title || 'Untitled Event'}</h4>
-                    
-                    <div class="bg-slate-50/50 rounded-xl p-3 space-y-2 mb-4 border border-slate-100/50">
-                        <div class="text-[10px] font-bold text-slate-600 uppercase tracking-tight flex items-center gap-2">
-                            <span class="text-lg">📍</span> 
-                            <span>Location: <span class="text-blue-600 font-black">${loc}</span></span>
-                        </div>
-                        <div class="text-[10px] font-bold text-slate-600 uppercase tracking-tight flex items-center gap-2">
-                            <span class="text-lg">⏰</span> 
-                            <span>Time: <span class="text-blue-600 font-black">${timeDisplay}</span></span>
-                        </div>
-                    </div>
-
-                    <p class="text-slate-500 text-xs leading-relaxed italic h-auto mb-6">
-                        ${event.description || 'No description provided.'}
-                    </p>
-                    
-                    <div class="pt-4 border-t border-slate-100 flex items-center justify-between">
-                         <span class="text-[8px] font-black text-slate-300 uppercase tracking-widest">RISS OFFICIAL</span>
-                         <div class="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
-                    </div>
-                </div>
-            `;
-        }
-
-        setInterval(() => {
-            const clock = document.getElementById('live-clock');
-            if(clock) clock.innerText = new Date().toLocaleTimeString();
-        }, 1000);
-
-        loadEvents();
-    </script>
-</body>
-</html>
+            <div id="archive-container" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 opacity-40
