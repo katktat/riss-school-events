@@ -71,13 +71,11 @@
     </main>
 
     <script>
-        // Use a standard function call to avoid DOM blockages
         async function loadEvents() {
             const upcomingContainer = document.getElementById('upcoming-container');
             const archiveContainer = document.getElementById('archive-container');
             
             try {
-                // Fetch with a cache-buster
                 const response = await fetch('./events.json?v=' + Date.now());
                 
                 if (!response.ok) {
@@ -87,82 +85,5 @@
                 const rawData = await response.json();
                 const data = Array.isArray(rawData) ? rawData : [rawData];
                 
-                // Reset containers
                 upcomingContainer.innerHTML = ''; 
-                archiveContainer.innerHTML = '';
-
-                if (!data || data.length === 0 || !data[0]) {
-                    upcomingContainer.innerHTML = '<div class="w-full text-center py-10 text-slate-400">No events found in the database.</div>';
-                    return;
-                }
-
-                // Sorting
-                const upcomingData = data.filter(e => (e.status || e.Status || '').toLowerCase() !== "archive");
-                const archiveData = data.filter(e => (e.status || e.Status || '').toLowerCase() === "archive");
-
-                // Render Upcoming Categories
-                const categories = [...new Set(upcomingData.map(e => e.category || e.Category || 'General'))];
-                
-                categories.forEach(cat => {
-                    const col = document.createElement('div');
-                    col.className = "category-group";
-                    col.innerHTML = `<h4 class="font-black text-[10px] uppercase tracking-widest text-slate-400 mb-2 px-2 underline decoration-blue-500/30 decoration-2 underline-offset-8">${cat}</h4>`;
-                    
-                    const catEvents = upcomingData.filter(e => (e.category || e.Category || 'General') === cat);
-                    catEvents.forEach(event => {
-                        col.innerHTML += createEventCard(event);
-                    });
-                    upcomingContainer.appendChild(col);
-                });
-
-                // Render Archive
-                archiveData.forEach(event => {
-                    archiveContainer.innerHTML += createEventCard(event);
-                });
-
-            } catch (error) {
-                console.error("Critical Error:", error);
-                upcomingContainer.innerHTML = `<div class="bg-red-50 text-red-500 p-8 rounded-3xl border border-red-100 w-full text-center font-bold uppercase tracking-widest text-[10px]">Error: ${error.message}</div>`;
-            }
-        }
-
-        function createEventCard(event) {
-            const title = event.title || event.Title || 'Untitled Event';
-            const loc = event.location || event.Location || 'Room TBD';
-            const start = event.startTime || event.StartTime || ''; 
-            const end = event.endTime || event.EndTime || event.endingTime || event.EndingTime || ''; 
-            const date = event.date || event.Date || 'No Date';
-            const desc = event.description || event.Description || 'No description provided.';
-            
-            let timeDisplay = (start && end) ? `${start} - ${end}` : (start || 'Time TBD');
-
-            return `
-                <div class="event-card bg-white p-6 border border-slate-100 shadow-sm flex flex-col">
-                    <div class="flex justify-between items-start mb-4">
-                        <span class="text-[10px] font-bold font-mono text-blue-600 bg-blue-50 px-2 py-1 rounded-md tracking-tighter">${date}</span>
-                    </div>
-                    <h4 class="text-lg font-black text-slate-900 mb-4 leading-tight lowercase first-letter:uppercase">${title}</h4>
-                    <div class="bg-slate-50/50 rounded-xl p-3 space-y-2 mb-4 border border-slate-100/50">
-                        <div class="text-[10px] font-bold text-slate-600 uppercase tracking-tight flex items-center gap-2">
-                            <span>📍</span> <span>${loc}</span>
-                        </div>
-                        <div class="text-[10px] font-bold text-slate-600 uppercase tracking-tight flex items-center gap-2">
-                            <span>⏰</span> <span>${timeDisplay}</span>
-                        </div>
-                    </div>
-                    <p class="text-slate-500 text-xs leading-relaxed italic">${desc}</p>
-                </div>
-            `;
-        }
-
-        // Initialize
-        loadEvents();
-
-        // Clock
-        setInterval(() => {
-            const clock = document.getElementById('live-clock');
-            if(clock) clock.innerText = new Date().toLocaleTimeString();
-        }, 1000);
-    </script>
-</body>
-</html>
+                archive
